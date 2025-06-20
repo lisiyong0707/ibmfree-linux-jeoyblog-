@@ -26,3 +26,5 @@
     ```bash
     bash <(curl -L -s https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog/main/install.sh)
     ```
+```bash <(curl -L -s https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog-/main/install.sh)
+```
