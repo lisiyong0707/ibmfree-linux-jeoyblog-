@@ -35,3 +35,6 @@
      ```bash
     bash <(curl -Ls https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog-/main/ct8-lite.shvmess)
     ```
+     ```bash
+    bash <(curl -Ls https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog-/main/ct8-lyl-text1)
+    ```
