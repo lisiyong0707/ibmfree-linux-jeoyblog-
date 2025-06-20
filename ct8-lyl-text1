@@ -1,0 +1,110 @@
+#!/bin/bash
+set -e
+
+echo -e "\033[35m=== CT8 - sing-box + Argo 隧道自动部署脚本 ===\033[0m"
+
+# 检查依赖
+yum install -y curl tar unzip uuidgen >/dev/null
+
+# 生成 UUID
+UUID=${UUID:-$(uuidgen)}
+echo -e "\033[32m[*] UUID: $UUID\033[0m"
+
+# 设置路径
+BASE_DIR=~/ct8-singbox
+mkdir -p "$BASE_DIR" && cd "$BASE_DIR"
+
+# 下载并安装 sing-box
+if [ ! -f sing-box ]; then
+  echo -e "\033[36m[*] 下载 sing-box...\033[0m"
+  curl -LO https://github.com/SagerNet/sing-box/releases/latest/download/sing-box-linux-amd64.tar.gz
+  tar -xf sing-box-linux-amd64.tar.gz
+  mv sing-box-*/* .
+  chmod +x sing-box
+fi
+
+# 下载 cloudflared
+if [ ! -f cloudflared ]; then
+  echo -e "\033[36m[*] 下载 Cloudflare Argo 客户端...\033[0m"
+  curl -LO https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+  mv cloudflared-linux-amd64 cloudflared
+  chmod +x cloudflared
+fi
+
+# 配置 WS 服务端
+read -p "请输入路径 (WebSocket path) [默认 /ray]: " WSPATH
+WSPATH=${WSPATH:-/ray}
+
+# 生成配置文件
+cat > config.json <<EOF
+{
+  "log": { "level": "info" },
+  "inbounds": [{
+    "type": "vmess",
+    "listen": "127.0.0.1",
+    "listen_port": 2080,
+    "users": [{ "uuid": "$UUID" }],
+    "stream_settings": {
+      "network": "ws",
+      "ws_settings": {
+        "path": "$WSPATH"
+      }
+    }
+  }],
+  "outbounds": [{ "type": "direct" }]
+}
+EOF
+
+# 选择 Argo 模式
+echo
+echo -e "\033[36m请选择 Argo 隧道模式：\033[0m"
+echo "1) 临时 Argo 隧道（无需注册 Cloudflare）"
+echo "2) 使用 Argo Token/JSON（需 CF 账号）"
+read -p "选择模式 [1]: " ARGO_MODE
+ARGO_MODE=${ARGO_MODE:-1}
+
+if [ "$ARGO_MODE" = "2" ]; then
+  echo -e "\033[33m请将你的 Argo Tunnel JSON/Token 粘贴到以下文件中：\033[0m"
+  read -p "输入 JSON 文件名或 Token 字符串： " ARGO_AUTH
+  echo "$ARGO_AUTH" > tunnel.json
+  ARGO_CMD="./cloudflared tunnel --config tunnel.json run"
+else
+  # 临时隧道模式
+  echo -e "\033[32m[*] 启动临时 Argo 隧道...\033[0m"
+  nohup ./cloudflared tunnel --url http://localhost:2080 > argo.log 2>&1 &
+  sleep 3
+  ARGO_URL=$(grep -o 'https://[^ ]*trycloudflare.com' argo.log | tail -n1)
+fi
+
+# 输出配置链接
+echo -e "\n\033[32m[*] Argo 地址: $ARGO_URL\033[0m"
+ARGO_HOST=$(echo "$ARGO_URL" | awk -F[/:] '{print $4}')
+
+# 构造 v2rayN 链接
+VMESS_JSON=$(cat <<EOF
+{
+  "v": "2",
+  "ps": "CT8-Argo",
+  "add": "$ARGO_HOST",
+  "port": "443",
+  "id": "$UUID",
+  "aid": "0",
+  "net": "ws",
+  "type": "none",
+  "host": "$ARGO_HOST",
+  "path": "$WSPATH",
+  "tls": "tls"
+}
+EOF
+)
+
+VMESS_LINK="vmess://$(echo -n "$VMESS_JSON" | base64 -w0)"
+
+echo -e "\n\033[33m[*] v2rayN 导入链接:\033[0m"
+echo "$VMESS_LINK"
+
+# 启动 sing-box
+echo -e "\n\033[32m[*] 正在启动 sing-box...\033[0m"
+nohup ./sing-box run -c config.json > run.log 2>&1 &
+
+echo -e "\n\033[35m✅ 部署完成。将链接导入 v2rayN 即可使用。\033[0m"
