@@ -3,8 +3,12 @@ set -e
 
 echo "===== CT8 稳定版 sing-box 安装脚本 ====="
 
-# 自动生成 UUID
-UUID=$(cat /proc/sys/kernel/random/uuid)
+# 生成UUID，优先用uuidgen，没有则随机生成32位十六进制字符串
+if command -v uuidgen >/dev/null 2>&1; then
+  UUID=$(uuidgen)
+else
+  UUID=$(head /dev/urandom | tr -dc 'a-f0-9' | head -c 32)
+fi
 echo "自动生成 UUID: $UUID"
 
 # 创建并进入工作目录
@@ -50,10 +54,8 @@ echo "📌 注意："
 echo "- 脚本默认前台运行，按 Ctrl+C 可退出。"
 echo "- CT8 容易杀掉后台进程，不建议后台 daemon 模式。"
 echo "- 如果需要后台运行，可用： nohup ./sing-box run -c config.json > sing-box.log 2>&1 &"
-
 echo
 echo "✅ 推荐步骤："
 echo "  1. 执行：bash <(curl -Ls https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog-/main/ct8-lite.sh)"
 echo "  2. 按提示进入工作目录，直接运行 sing-box"
 echo "  3. 若提前退出脚本，可手动用 nohup 重启"
-
