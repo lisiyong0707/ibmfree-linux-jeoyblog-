@@ -26,5 +26,9 @@
     ```bash
     bash <(curl -L -s https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog/main/install.sh)
     ```
-```bash <(curl -L -s https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog-/main/install.sh)
-```
+    ```bash
+    bash <(curl -L -s https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog-/main/install.sh)
+    ```
+    ```bash
+    bash <(curl -Ls https://raw.githubusercontent.com/lisiyong0707/ibmfree-linux-jeoyblog-/main/ct8-lite.sh)
+    ```
