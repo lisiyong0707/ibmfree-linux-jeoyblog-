@@ -1,0 +1,85 @@
+#!/bin/bash
+set -e
+
+echo "===== CT8 sing-box + WebSocket伪装 + v2rayN 导入链接脚本 ====="
+
+# 生成UUID
+if command -v uuidgen >/dev/null 2>&1; then
+  UUID=$(uuidgen)
+else
+  UUID=$(head /dev/urandom | tr -dc 'a-f0-9' | head -c 32)
+fi
+echo "自动生成 UUID: $UUID"
+
+# 创建并进入工作目录
+BASE=~/ct8-sing-box
+mkdir -p "$BASE"
+cd "$BASE"
+
+# 下载 sing-box（仅下载一次）
+if [ ! -f sing-box ]; then
+  echo "[*] 下载 sing-box..."
+  curl -L -o singbox.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.8.0/sing-box-1.8.0-linux-amd64.tar.gz
+  tar -xzf singbox.tar.gz
+  mv sing-box-*/sing-box ./
+  chmod +x sing-box
+  rm -rf singbox.tar.gz sing-box-*/
+fi
+
+# 你需要自己准备一个域名指向你的服务器IP，写到这里
+DOMAIN="your.domain.com"
+
+# 生成 config.json（WebSocket伪装）
+cat > config.json <<EOF
+{
+  "log": { "level": "info" },
+  "inbounds": [{
+    "type": "vmess",
+    "listen": "0.0.0.0",
+    "listen_port": 2080,
+    "users": [{"uuid": "$UUID"}],
+    "streamSettings": {
+      "network": "ws",
+      "wsSettings": {
+        "path": "/ray",
+        "headers": {
+          "Host": "$DOMAIN"
+        }
+      }
+    }
+  }],
+  "outbounds": [{"type": "direct"}]
+}
+EOF
+
+# 获取服务器公网 IP
+IP=$(curl -s https://ipinfo.io/ip)
+
+# 生成带伪装域名的 v2rayN 导入链接
+VMESS_JSON=$(cat <<EOF
+{
+  "v": "2",
+  "ps": "CT8-sing-box-WS",
+  "add": "$IP",
+  "port": "2080",
+  "id": "$UUID",
+  "aid": "0",
+  "net": "ws",
+  "type": "none",
+  "host": "$DOMAIN",
+  "path": "/ray",
+  "tls": ""
+}
+EOF
+)
+
+VMESS_BASE64=$(echo -n "$VMESS_JSON" | base64 -w0)
+
+echo
+echo "===== v2rayN 可导入的 vmess 链接（带 WebSocket 伪装） ====="
+echo "vmess://$VMESS_BASE64"
+echo
+echo "复制以上链接到 v2rayN → 服务器 → 导入 → 从剪贴板导入"
+echo
+echo "启动 sing-box："
+echo "cd $BASE && ./sing-box run -c config.json"
