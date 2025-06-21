@@ -1,4 +1,7 @@
-## 感谢老王大半夜提供编译支持
+## 
+声明；本项目fork于**[byJoey]((https://github.com/byJoey))**
+本人在此感谢原项目作者，可以给他点个关注。他还有很多其他很好玩的项目。
+感谢老王大半夜提供编译支持
 脚本修改基于 **[eooce 老王](https://github.com/eooce)** 
 ### 注册地址 https://linuxone.cloud.marist.edu/
 ## 运行说明
